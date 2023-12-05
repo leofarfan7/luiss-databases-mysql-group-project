@@ -22,9 +22,7 @@ def createdb(user: str, password: str):
 
 def create_tables(user: str, password: str):
     try:
-        with mysql.connect(
-            host="localhost", user=user, passwd=password, database="popular_videogames"
-        ) as db_conn:
+        with mysql.connect(host="localhost", user=user, passwd=password, database="popular_videogames") as db_conn:
             with db_conn.cursor() as cursor:
                 videogames = (
                     "CREATE TABLE IF NOT EXISTS videogames("
@@ -41,9 +39,7 @@ def create_tables(user: str, password: str):
                     "wishlist INT);"
                 )
 
-                developers = (
-                    "CREATE TABLE IF NOT EXISTS developers(" "name VARCHAR(100) PRIMARY KEY);"
-                )
+                developers = "CREATE TABLE IF NOT EXISTS developers(" "name VARCHAR(100) PRIMARY KEY);"
 
                 genre = "CREATE TABLE IF NOT EXISTS genre(" "name VARCHAR(100) PRIMARY KEY);"
 
@@ -120,11 +116,16 @@ def num_variable_processing(number: str):
         return int(number)
 
 
+def multivalued_processing(original_string: str):
+    if original_string != "":
+        return ast.literal_eval(original_string)
+    else:
+        return []
+
+
 def insert_data(user: str, password: str):
     try:
-        with mysql.connect(
-            host="localhost", user=user, passwd=password, database="popular_videogames"
-        ) as db_conn:
+        with mysql.connect(host="localhost", user=user, passwd=password, database="popular_videogames") as db_conn:
             with db_conn.cursor() as cursor:
                 with open("./games.csv") as file:
                     dataset = csv.reader(file, delimiter=",")
@@ -132,15 +133,11 @@ def insert_data(user: str, password: str):
                     rows_read, rows_inserted = 0, 0
                     skipped_rows = 0
                     all_game_titles = set()
-                    games_inserted = []
                     for row in dataset:
                         rows_read += 1
                         skip_to_next_row = False
                         # Primary Key
                         game_id = int(row[0])
-
-                        # if game_id not in [45, 371, 821, 1332, 132, 421, 887]:
-                        #     continue
 
                         # String Values
                         game_title = row[1]
@@ -159,27 +156,12 @@ def insert_data(user: str, password: str):
                         wishlist = num_variable_processing(row[13])
 
                         # (Potential) Multivalued Attributes
-                        if row[3] != "":
-                            developers = ast.literal_eval(row[3])
-                        else:
-                            developers = []
-
-                        if row[7] != "":
-                            genres = ast.literal_eval(row[7])
-                        else:
-                            genres = []
-
-                        if row[9] != "":
-                            reviews = ast.literal_eval(row[9])
-                        else:
-                            reviews = []
+                        developers = multivalued_processing(row[3])
+                        genres = multivalued_processing(row[7])
+                        reviews = multivalued_processing(row[9])
 
                         if game_title in all_game_titles:
-                            compare_summary = (
-                                "SELECT summary, game_id "
-                                "FROM videogames "
-                                "WHERE game_title = %s;"
-                            )
+                            compare_summary = "SELECT summary, game_id " "FROM videogames " "WHERE game_title = %s;"
                             compare_summary_data = (game_title,)
                             cursor.execute(compare_summary, compare_summary_data)
                             result = cursor.fetchall()
@@ -220,7 +202,6 @@ def insert_data(user: str, password: str):
                         )
                         cursor.execute(insert_videogame, videogame_data)
                         all_game_titles.add(game_title)
-                        games_inserted.append(game_title)
 
                         for developer in developers:
                             try:
@@ -231,9 +212,7 @@ def insert_data(user: str, password: str):
                                 if err.errno != 1062:
                                     print(f"Error: {err}")
 
-                            relate_dev_to_game = (
-                                "INSERT INTO developed_by(developer, game_id) VALUES (%s, %s)"
-                            )
+                            relate_dev_to_game = "INSERT INTO developed_by(developer, game_id) VALUES (%s, %s)"
                             dev_to_game_data = (developer, game_id)
                             cursor.execute(relate_dev_to_game, dev_to_game_data)
 
@@ -246,9 +225,7 @@ def insert_data(user: str, password: str):
                                 if err.errno != 1062:
                                     print(f"Error: {err}")
 
-                            relate_genre_to_game = (
-                                "INSERT INTO genre_is(game_id, genre_name) VALUES (%s, %s)"
-                            )
+                            relate_genre_to_game = "INSERT INTO genre_is(game_id, genre_name) VALUES (%s, %s)"
                             genre_to_game_data = (game_id, genre)
                             cursor.execute(relate_genre_to_game, genre_to_game_data)
 
@@ -261,7 +238,7 @@ def insert_data(user: str, password: str):
 
                     print(f"{rows_read} row(s) have been read successfully.")
                     print(f"{rows_inserted} distinct row(s) have been inserted successfully.")
-                    print(f"{skipped_rows} row(s) because of duplicated data.")
+                    print(f"{skipped_rows} row(s) have been skipped because of duplicated data.")
 
             db_conn.commit()
 
@@ -271,9 +248,7 @@ def insert_data(user: str, password: str):
 
 def resetdb(user: str, password: str):
     try:
-        with mysql.connect(
-            host="localhost", user=user, passwd=password, database="popular_videogames"
-        ) as db_conn:
+        with mysql.connect(host="localhost", user=user, passwd=password, database="popular_videogames") as db_conn:
             with db_conn.cursor() as cursor:
                 cursor.execute("DROP DATABASE popular_videogames")
     except mysql.Error as err:
